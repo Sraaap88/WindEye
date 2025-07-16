@@ -5,6 +5,8 @@ import android.media.MediaRecorder
 import android.util.AttributeSet
 import android.view.View
 import android.widget.FrameLayout
+import android.content.pm.PackageManager
+import android.Manifest
 import kotlin.math.log10
 
 class EyeView @JvmOverloads constructor(
@@ -15,42 +17,66 @@ class EyeView @JvmOverloads constructor(
 
     private val animationManager = EyeAnimationManager(context)
     private var recorder: MediaRecorder? = null
+    private var monitoringThread: Thread? = null
+    private var isMonitoring = false
 
     init {
         addView(animationManager)
-        startBreathMonitoring()
+        // Ne pas démarrer automatiquement - attendre la permission
     }
 
-    private fun startBreathMonitoring() {
-        recorder = MediaRecorder().apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-            setOutputFile("/dev/null")
-            prepare()
-            start()
+    fun startBreathMonitoring() {
+        if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            return
         }
 
-        val thread = Thread {
-            while (true) {
-                try {
-                    Thread.sleep(100)
-                    recorder?.maxAmplitude?.let {
-                        val dB = 20 * log10(it.toDouble().coerceAtLeast(1.0)) / 90.0
-                        post { animationManager.updateFromBreath(dB.toFloat()) }
+        try {
+            recorder = MediaRecorder().apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+                setOutputFile("/dev/null")
+                prepare()
+                start()
+            }
+
+            isMonitoring = true
+            monitoringThread = Thread {
+                while (isMonitoring) {
+                    try {
+                        Thread.sleep(100)
+                        recorder?.maxAmplitude?.let {
+                            val dB = 20 * log10(it.toDouble().coerceAtLeast(1.0)) / 90.0
+                            post { animationManager.updateFromBreath(dB.toFloat()) }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        break
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
                 }
             }
+            monitoringThread?.start()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        thread.start()
+    }
+
+    fun stopBreathMonitoring() {
+        isMonitoring = false
+        monitoringThread?.interrupt()
+        monitoringThread = null
+        
+        try {
+            recorder?.stop()
+            recorder?.release()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        recorder = null
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        recorder?.stop()
-        recorder?.release()
-        recorder = null
+        stopBreathMonitoring()
     }
 }
