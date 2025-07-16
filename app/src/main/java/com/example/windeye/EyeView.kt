@@ -6,6 +6,8 @@ import android.util.AttributeSet
 import android.view.View
 import android.widget.ImageView
 import android.widget.FrameLayout
+import com.example.windeye.R
+import com.example.windeye.EyeState
 
 class EyeView @JvmOverloads constructor(
     context: Context,
