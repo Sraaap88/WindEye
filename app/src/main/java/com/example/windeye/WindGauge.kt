@@ -1,4 +1,3 @@
-
 package com.example.windeye
 
 import android.content.Context
@@ -36,6 +35,12 @@ class WindGauge(private val context: Context) {
             AudioFormat.ENCODING_PCM_16BIT,
             bufferSize
         )
+
+        // Vérification d'état avant de démarrer
+        if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+            audioRecord?.release()
+            return
+        }
 
         audioRecord?.startRecording()
         isRecording = true
