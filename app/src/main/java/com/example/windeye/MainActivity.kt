@@ -9,22 +9,20 @@ class MainActivity : Activity() {
     private lateinit var windGauge: WindGauge
     private lateinit var eyeView: EyeView
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+       override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        eyeView = findViewById(R.id.eyeView)
-        eyeAnimationManager = EyeAnimationManager()
-        windGauge = WindGauge(this)
-
+    
+        val eyeView: EyeView = findViewById(R.id.eyeView)
+        val windGauge = WindGauge(this) // Si tu l'utilises visuellement, il faudra aussi l'ajouter à l'affichage
+    
         // Vérifier la permission avant de démarrer
         if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            startListening()
+            // eyeView démarre déjà tout seul via son init
         } else {
             requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 123)
         }
     }
-
     private fun startListening() {
         windGauge.setOnWindChangeListener { force ->
             eyeAnimationManager.updateWindForce(force)
