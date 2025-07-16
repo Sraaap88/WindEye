@@ -1,11 +1,10 @@
-
 package com.example.windeye
 
+import android.app.Activity
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import com.example.windeye.databinding.ActivityMainBinding
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var eyeAnimationManager: EyeAnimationManager
