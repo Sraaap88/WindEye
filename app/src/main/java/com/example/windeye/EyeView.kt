@@ -1,5 +1,5 @@
 
-package com.example.windeye
+package com.example.windeye.R
 
 import android.content.Context
 import android.util.AttributeSet
