@@ -17,13 +17,27 @@ class MainActivity : Activity() {
         eyeAnimationManager = EyeAnimationManager()
         windGauge = WindGauge(this)
 
-        // Met à jour l'œil toutes les 50 ms avec la force du souffle
+        // Vérifier la permission avant de démarrer
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            startListening()
+        } else {
+            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 123)
+        }
+    }
+
+    private fun startListening() {
         windGauge.setOnWindChangeListener { force ->
             eyeAnimationManager.updateWindForce(force)
             eyeView.updateState(eyeAnimationManager.currentState)
         }
-
         windGauge.startListening()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 123 && grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            startListening()
+        }
     }
 
     override fun onDestroy() {
