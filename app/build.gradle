@@ -2,16 +2,21 @@ plugins {
     id 'com.android.application'
     id 'kotlin-android'
 }
+
 android {
-    namespace 'com.example.windbird'
+    namespace 'com.example.windeye'
     compileSdk 33
     
     defaultConfig {
-        applicationId "com.example.windbird"
+        applicationId "com.example.windeye"
         minSdk 28
         targetSdk 30  // Plus compatible avec Huawei
         versionCode 1
         versionName "1.0"
+    }
+    
+    buildFeatures {
+        dataBinding = true
     }
     
     buildTypes {
@@ -42,11 +47,12 @@ android {
     // Changer le nom des fichiers APK
     applicationVariants.all { variant ->
         variant.outputs.all {
-            def appName = "windbird"
+            def appName = "windeye"
             outputFileName = "${appName}-${variant.buildType.name}.apk"
         }
     }
 }
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.8.10"
     implementation 'androidx.core:core-ktx:1.9.0'
