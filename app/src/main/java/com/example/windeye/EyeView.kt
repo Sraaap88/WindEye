@@ -20,6 +20,10 @@ class EyeView @JvmOverloads constructor(
     private val layerLarme = ImageView(context)
     private val layerSang = ImageView(context)
     private val layerFissure = ImageView(context)
+    private val layerPlisseRouge = ImageView(context)
+    private val layerRougeLarme = ImageView(context)
+    private val layerLarmeSang = ImageView(context)
+    private val layerSangFissure = ImageView(context)
 
     init {
         // Appliquer les images (à placer dans drawable)
@@ -29,6 +33,10 @@ class EyeView @JvmOverloads constructor(
         layerLarme.setImageResource(R.drawable.layer_larme)
         layerSang.setImageResource(R.drawable.layer_sang)
         layerFissure.setImageResource(R.drawable.layer_fissure)
+        layerPlisseRouge.setImageResource(R.drawable.layer_plisse_rouge)
+        layerRougeLarme.setImageResource(R.drawable.layer_rouge_larme)
+        layerLarmeSang.setImageResource(R.drawable.layer_larme_sang)
+        layerSangFissure.setImageResource(R.drawable.layer_sang_fissure)
 
         // Ajouter dans l’ordre d’empilement
         addView(eyeBase)
@@ -37,6 +45,10 @@ class EyeView @JvmOverloads constructor(
         addView(layerLarme)
         addView(layerSang)
         addView(layerFissure)
+        addView(layerPlisseRouge)
+        addView(layerRougeLarme)
+        addView(layerLarmeSang)
+        addView(layerSangFissure)
 
         // Initialement, tout sauf l'œil de base est invisible
         resetLayers()
@@ -48,17 +60,33 @@ class EyeView @JvmOverloads constructor(
         layerLarme.alpha = 0f
         layerSang.alpha = 0f
         layerFissure.alpha = 0f
+        layerPlisseRouge.alpha = 0f
+        layerRougeLarme.alpha = 0f
+        layerLarmeSang.alpha = 0f
+        layerSangFissure.alpha = 0f
     }
 
-    fun updateState(state: EyeState) {
-        resetLayers()
-        when (state) {
-            EyeState.PLISSE -> layerPlisse.alpha = 1f
-            EyeState.ROUGE -> layerRouge.alpha = 1f
-            EyeState.LARME -> layerLarme.alpha = 1f
-            EyeState.SANG -> layerSang.alpha = 1f
-            EyeState.FISSURE -> layerFissure.alpha = 1f
-            else -> {} // NEUTRAL = aucune couche
+   fun updateState(state: EyeState) {
+            resetLayers()
+        
+            fun fade(view: ImageView) {
+                view.animate().alpha(1f).setDuration(300).start()
+            }
+        
+            when (state) {
+                EyeState.PLISSE -> fade(layerPlisse)
+                EyeState.ROUGE -> fade(layerRouge)
+                EyeState.LARME -> fade(layerLarme)
+                EyeState.SANG -> fade(layerSang)
+                EyeState.FISSURE -> fade(layerFissure)
+        
+                // Intermédiaires :
+                EyeState.PLISSE_ROUGE -> fade(layerPlisseRouge)
+                EyeState.ROUGE_LARME -> fade(layerRougeLarme)
+                EyeState.LARME_SANG -> fade(layerLarmeSang)
+                EyeState.SANG_FISSURE -> fade(layerSangFissure)
+        
+                else -> {} // NEUTRAL
+            }
         }
-    }
 }
