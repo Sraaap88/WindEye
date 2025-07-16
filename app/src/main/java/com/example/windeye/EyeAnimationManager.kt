@@ -27,7 +27,10 @@ class EyeAnimationManager(context: Context) : FrameLayout(context) {
     // Plusieurs couches d'images pour superposition
     private val imageLayers = mutableListOf<ImageView>()
     private var currentStage = 0
+    private var peakStage = 0 // Garder trace du pic
+    private var lastPeakTime = 0L // Timestamp du dernier pic
     private val handler = Handler(Looper.getMainLooper())
+    private val PEAK_HOLD_DURATION = 250L // 1/4 de seconde en millisecondes
 
     init {
         // Créer 3 couches d'images superposées
@@ -53,9 +56,27 @@ class EyeAnimationManager(context: Context) : FrameLayout(context) {
 
     fun updateFromBreath(strength: Float) {
         val targetStage = mapStrengthToStage(strength)
-        if (targetStage != currentStage) {
-            animateLayeredTransition(currentStage, targetStage, strength)
-            currentStage = targetStage
+        val currentTime = System.currentTimeMillis()
+        
+        // Détecter si c'est un nouveau pic
+        if (targetStage > peakStage) {
+            peakStage = targetStage
+            lastPeakTime = currentTime
+        }
+        
+        // Choisir le stage à afficher : soit le pic qui persiste, soit la valeur actuelle
+        val displayStage = if (currentTime - lastPeakTime < PEAK_HOLD_DURATION) {
+            // On est encore dans la période de maintien du pic
+            peakStage
+        } else {
+            // La période de maintien est finie, utiliser la valeur actuelle
+            peakStage = targetStage // Réinitialiser le pic
+            targetStage
+        }
+        
+        if (displayStage != currentStage) {
+            animateLayeredTransition(currentStage, displayStage, strength)
+            currentStage = displayStage
         }
     }
 
