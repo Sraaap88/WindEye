@@ -14,42 +14,46 @@ class BoatRaceView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
     
     private var windGauge: WindGauge? = null
-    private var networkManager: NetworkManager? = null
-    private var playerNumber: Int = 1
+    private var recordsManager: RecordsManager? = null
+    private var playerName: String = ""
     
     // État de la course
     private var myProgress: Float = 0f // 0-100%
-    private var opponentProgress: Float = 0f
     private var mySpeed: Float = 0f // 0-1
-    private var opponentSpeed: Float = 0f
+    
+    // Timer de course
+    private var raceStartTime: Long = 0
+    private var raceTime: Float = 0f
+    private var raceFinished: Boolean = false
     
     // Paramètres de la course
     private var raceDistance: Float = 1000f
     private var weatherCondition: WeatherType = WeatherType.CALM
-    private var raceFinished: Boolean = false
-    private var winner: Int = 0
     private var raceTrack: RaceTrack = RaceTrack.STRAIGHT
-    private var trackProgress: Float = 0f // Position sur le tracé (0-100%)
     
     // Animation
     private var waveOffset: Float = 0f
     private var boatRoll: Float = 0f
     private var frameCount: Long = 0
     
-    // Météo aléatoire
-    enum class WeatherType(val waveIntensity: Float, val visibility: Float) {
-        CALM(0.2f, 1.0f),
-        ROUGH(0.5f, 0.8f),
-        STORM(0.8f, 0.6f)
-    }
+    // Callbacks
+    private var onRaceFinished: ((Float, String, String) -> Unit)? = null
+    private var onTimerUpdate: ((Float) -> Unit)? = null
     
     // Types de trajets aléatoires
-    enum class RaceTrack(val displayName: String, val laps: Int) {
-        STRAIGHT("Ligne droite", 1),
-        CURVES("Parcours sinueux", 1),
-        OVAL("Circuit ovale", 2),
-        FIGURE_EIGHT("Parcours en huit", 2),
-        ZIGZAG("Parcours zigzag", 1)
+    enum class RaceTrack(val displayName: String, val laps: Int, val difficulty: Float) {
+        STRAIGHT("Ligne droite", 1, 1.0f),
+        CURVES("Parcours sinueux", 1, 1.1f),
+        OVAL("Circuit ovale", 2, 1.3f),
+        FIGURE_EIGHT("Parcours en huit", 2, 1.4f),
+        ZIGZAG("Parcours zigzag", 1, 1.2f)
+    }
+    
+    // Météo aléatoire
+    enum class WeatherType(val displayName: String, val waveIntensity: Float, val visibility: Float, val speedMultiplier: Float) {
+        CALM("Calme", 0.2f, 1.0f, 1.0f),
+        ROUGH("Agité", 0.5f, 0.8f, 0.8f),
+        STORM("Tempête", 0.8f, 0.6f, 0.6f)
     }
     
     // Paint objects
@@ -74,17 +78,6 @@ class BoatRaceView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
     
-    private val mirrorPaint = Paint().apply {
-        color = Color.parseColor("#E6E6FA")
-        style = Paint.Style.FILL
-    }
-    
-    private val mirrorBorderPaint = Paint().apply {
-        color = Color.parseColor("#333333")
-        style = Paint.Style.STROKE
-        strokeWidth = 4f
-    }
-    
     private val finishLinePaint = Paint().apply {
         color = Color.parseColor("#FF0000")
         alpha = 150
@@ -98,22 +91,33 @@ class BoatRaceView @JvmOverloads constructor(
     
     private val textPaint = Paint().apply {
         color = Color.WHITE
-        textSize = 32f
+        textSize = 28f
         textAlign = Paint.Align.CENTER
         isAntiAlias = true
     }
     
-    fun setPlayerNumber(number: Int) {
-        playerNumber = number
+    fun setPlayerName(name: String) {
+        playerName = name
     }
     
-    fun setNetworkManager(manager: NetworkManager?) {
-        networkManager = manager
+    fun setRecordsManager(manager: RecordsManager?) {
+        recordsManager = manager
+    }
+    
+    fun setOnRaceFinished(callback: (Float, String, String) -> Unit) {
+        onRaceFinished = callback
+    }
+    
+    fun setOnTimerUpdate(callback: (Float) -> Unit) {
+        onTimerUpdate = callback
     }
     
     fun startRace() {
-        // Générer parcours et météo aléatoires
         generateRandomRace()
+        
+        // Démarrer le timer
+        raceStartTime = System.currentTimeMillis()
+        raceTime = 0f
         
         // Démarrer la détection de souffle
         windGauge = WindGauge(context)
@@ -129,29 +133,19 @@ class BoatRaceView @JvmOverloads constructor(
     }
     
     private fun generateRandomRace() {
-        // Distance aléatoire selon le type de trajet
-        raceDistance = Random.nextFloat() * 400f + 800f
-        
         // Type de trajet aléatoire
         raceTrack = RaceTrack.values()[Random.nextInt(RaceTrack.values().size)]
-        
-        // Ajuster la distance selon le type
-        when (raceTrack) {
-            RaceTrack.OVAL, RaceTrack.FIGURE_EIGHT -> raceDistance *= raceTrack.laps
-            else -> { /* Garder distance normale */ }
-        }
         
         // Météo aléatoire
         weatherCondition = WeatherType.values()[Random.nextInt(WeatherType.values().size)]
         
-        // Reset positions
+        // Distance ajustée selon difficulté
+        raceDistance = 800f * raceTrack.difficulty
+        
+        // Reset état
         myProgress = 0f
-        opponentProgress = 0f
-        trackProgress = 0f
         mySpeed = 0f
-        opponentSpeed = 0f
         raceFinished = false
-        winner = 0
     }
     
     private fun handleWindInput(amplitude: Float) {
@@ -159,67 +153,50 @@ class BoatRaceView @JvmOverloads constructor(
         mySpeed = amplitude.coerceIn(0f, 1f)
         
         // Ajuster selon météo
-        val weatherMultiplier = when (weatherCondition) {
-            WeatherType.CALM -> 1.0f
-            WeatherType.ROUGH -> 0.8f
-            WeatherType.STORM -> 0.6f
-        }
-        
-        val adjustedSpeed = mySpeed * weatherMultiplier
+        val adjustedSpeed = mySpeed * weatherCondition.speedMultiplier
         
         // Avancer le bateau
-        myProgress += adjustedSpeed * 0.8f // Vitesse d'avancement
+        myProgress += adjustedSpeed * 0.7f
         
-        // Vérifier victoire
+        // Vérifier fin de course
         if (myProgress >= 100f && !raceFinished) {
-            raceFinished = true
-            winner = playerNumber
-            networkManager?.sendRaceFinished(playerNumber)
-        }
-        
-        // Envoyer position à l'adversaire
-        networkManager?.sendPosition(myProgress, adjustedSpeed)
-        
-        invalidate()
-    }
-    
-    fun updateOpponentPosition(progress: Float, speed: Float) {
-        opponentProgress = progress
-        opponentSpeed = speed
-        
-        // Vérifier si adversaire a gagné
-        if (progress >= 100f && !raceFinished) {
-            raceFinished = true
-            winner = if (playerNumber == 1) 2 else 1
+            finishRace()
         }
         
         invalidate()
     }
     
-    fun showWinner(winnerNumber: Int) {
+    private fun finishRace() {
         raceFinished = true
-        winner = winnerNumber
-        invalidate()
-    }
-    
-    fun startNewRace() {
-        generateRandomRace()
-        invalidate()
+        raceTime = (System.currentTimeMillis() - raceStartTime) / 1000f
+        
+        // Notifier la fin de course
+        onRaceFinished?.invoke(raceTime, raceTrack.displayName, weatherCondition.displayName)
+        
+        windGauge?.stopListening()
     }
     
     private fun startAnimation() {
         post(object : Runnable {
             override fun run() {
+                frameCount++
+                
+                // Mettre à jour le timer
+                if (!raceFinished && raceStartTime > 0) {
+                    raceTime = (System.currentTimeMillis() - raceStartTime) / 1000f
+                    onTimerUpdate?.invoke(raceTime)
+                }
+                
+                // Animation des vagues
+                waveOffset += mySpeed * 5f + 1f
+                
+                // Roulis du bateau selon vitesse et trajet
+                val trackMultiplier = raceTrack.difficulty
+                boatRoll = sin(frameCount * 0.1f) * mySpeed * 3f * trackMultiplier
+                
+                invalidate()
+                
                 if (!raceFinished) {
-                    frameCount++
-                    
-                    // Animation des vagues
-                    waveOffset += mySpeed * 5f + 1f
-                    
-                    // Roulis du bateau selon vitesse
-                    boatRoll = sin(frameCount * 0.1f) * mySpeed * 3f
-                    
-                    invalidate()
                     postDelayed(this, 16) // ~60 FPS
                 }
             }
@@ -237,10 +214,6 @@ class BoatRaceView @JvmOverloads constructor(
         val width = width.toFloat()
         val height = height.toFloat()
         
-        // Appliquer effets météo
-        val visibility = weatherCondition.visibility
-        val waveIntensity = weatherCondition.waveIntensity
-        
         // Ciel
         canvas.drawRect(0f, 0f, width, height * 0.4f, skyPaint)
         
@@ -251,11 +224,16 @@ class BoatRaceView @JvmOverloads constructor(
         if (myProgress > 70f) {
             val finishAlpha = ((myProgress - 70f) / 30f * 255).toInt()
             finishLinePaint.alpha = finishAlpha
-            canvas.drawRect(width * 0.3f, height * 0.4f, width * 0.7f, height * 0.6f, finishLinePaint)
+            val finishPosition = getFinishLinePosition(width, height)
+            canvas.drawRect(finishPosition.left, finishPosition.top, 
+                          finishPosition.right, finishPosition.bottom, finishLinePaint)
         }
         
+        // Tracé de course
+        drawRaceTrack(canvas, width, height)
+        
         // Vagues animées
-        drawWaves(canvas, width, height, waveIntensity)
+        drawWaves(canvas, width, height, weatherCondition.waveIntensity)
         
         // Éléments du cockpit
         drawCockpit(canvas, width, height)
@@ -265,14 +243,60 @@ class BoatRaceView @JvmOverloads constructor(
             drawFoam(canvas, width, height)
         }
         
-        // Miroir de navigation
-        drawNavigationMirror(canvas, width, height)
-        
         // Effets météo
-        drawWeatherEffects(canvas, width, height, visibility)
+        drawWeatherEffects(canvas, width, height, weatherCondition.visibility)
         
         // Interface
         drawUI(canvas, width, height)
+    }
+    
+    private fun getFinishLinePosition(width: Float, height: Float): RectF {
+        return when (raceTrack) {
+            RaceTrack.STRAIGHT -> RectF(width * 0.3f, height * 0.4f, width * 0.7f, height * 0.6f)
+            RaceTrack.CURVES -> RectF(width * 0.25f, height * 0.35f, width * 0.75f, height * 0.65f)
+            RaceTrack.OVAL -> RectF(width * 0.4f, height * 0.3f, width * 0.6f, height * 0.7f)
+            RaceTrack.FIGURE_EIGHT -> RectF(width * 0.35f, height * 0.45f, width * 0.65f, height * 0.55f)
+            RaceTrack.ZIGZAG -> RectF(width * 0.2f, height * 0.4f, width * 0.8f, height * 0.6f)
+        }
+    }
+    
+    private fun drawRaceTrack(canvas: Canvas, width: Float, height: Float) {
+        val trackPaint = Paint().apply {
+            color = Color.parseColor("#87CEEB")
+            style = Paint.Style.STROKE
+            strokeWidth = 6f
+            alpha = 100
+        }
+        
+        when (raceTrack) {
+            RaceTrack.STRAIGHT -> { /* Pas de tracé visible */ }
+            RaceTrack.CURVES -> {
+                val path = Path()
+                path.moveTo(width * 0.1f, height * 0.5f)
+                path.quadTo(width * 0.3f, height * 0.3f, width * 0.5f, height * 0.5f)
+                path.quadTo(width * 0.7f, height * 0.7f, width * 0.9f, height * 0.5f)
+                canvas.drawPath(path, trackPaint)
+            }
+            RaceTrack.OVAL -> {
+                val oval = RectF(width * 0.2f, height * 0.3f, width * 0.8f, height * 0.7f)
+                canvas.drawOval(oval, trackPaint)
+            }
+            RaceTrack.FIGURE_EIGHT -> {
+                val circle1 = RectF(width * 0.1f, height * 0.25f, width * 0.5f, height * 0.55f)
+                val circle2 = RectF(width * 0.5f, height * 0.45f, width * 0.9f, height * 0.75f)
+                canvas.drawOval(circle1, trackPaint)
+                canvas.drawOval(circle2, trackPaint)
+            }
+            RaceTrack.ZIGZAG -> {
+                val path = Path()
+                path.moveTo(width * 0.1f, height * 0.5f)
+                path.lineTo(width * 0.3f, height * 0.3f)
+                path.lineTo(width * 0.5f, height * 0.7f)
+                path.lineTo(width * 0.7f, height * 0.3f)
+                path.lineTo(width * 0.9f, height * 0.5f)
+                canvas.drawPath(path, trackPaint)
+            }
+        }
     }
     
     private fun drawWaves(canvas: Canvas, width: Float, height: Float, intensity: Float) {
@@ -297,127 +321,83 @@ class BoatRaceView @JvmOverloads constructor(
     }
     
     private fun drawCockpit(canvas: Canvas, width: Float, height: Float) {
-        // Bord du bateau (bas)
+        // Bord du bateau
         val boatBottom = height * 0.85f
         canvas.drawRect(0f, boatBottom, width, height, boatPaint)
         
-        // Cordages (gauche et droite)
+        // Cordages
         val ropePaint = Paint().apply {
             color = Color.parseColor("#D2691E")
             strokeWidth = 6f
         }
-        
-        // Cordage gauche
         canvas.drawLine(width * 0.1f, height * 0.6f, width * 0.15f, height, ropePaint)
-        
-        // Cordage droit
         canvas.drawLine(width * 0.9f, height * 0.6f, width * 0.85f, height, ropePaint)
         
-        // Barre (centre-bas)
+        // Barre
         canvas.drawRect(width * 0.45f, height * 0.9f, width * 0.55f, height * 0.95f, boatPaint)
     }
     
     private fun drawFoam(canvas: Canvas, width: Float, height: Float) {
         val foamIntensity = mySpeed
         
-        for (i in 0 until (foamIntensity * 20).toInt()) {
+        for (i in 0 until (foamIntensity * 15).toInt()) {
             val x = Random.nextFloat() * width
             val y = height * 0.7f + Random.nextFloat() * height * 0.3f
-            val radius = Random.nextFloat() * 8f + 2f
+            val radius = Random.nextFloat() * 6f + 2f
             
             foamPaint.alpha = (180 * foamIntensity * Random.nextFloat()).toInt()
             canvas.drawCircle(x, y, radius, foamPaint)
         }
     }
     
-    private fun drawNavigationMirror(canvas: Canvas, width: Float, height: Float) {
-        val mirrorX = width * 0.8f
-        val mirrorY = height * 0.15f
-        val mirrorRadius = 60f
-        
-        // Miroir
-        canvas.drawCircle(mirrorX, mirrorY, mirrorRadius, mirrorPaint)
-        canvas.drawCircle(mirrorX, mirrorY, mirrorRadius, mirrorBorderPaint)
-        
-        // Bateau adverse dans le miroir
-        val progressDiff = myProgress - opponentProgress
-        val opponentColor = if (playerNumber == 1) Color.BLUE else Color.RED
-        
-        val opponentPaint = Paint().apply {
-            color = opponentColor
-            textSize = 24f
-            textAlign = Paint.Align.CENTER
-        }
-        
-        // Position de l'adversaire dans le miroir
-        val opponentX = mirrorX + progressDiff * 0.5f
-        val opponentY = mirrorY
-        
-        canvas.drawText("⛵", opponentX, opponentY + 8f, opponentPaint)
-        
-        // Flèche directionnelle
-        val arrowPaint = Paint().apply {
-            color = Color.BLACK
-            textSize = 20f
-            textAlign = Paint.Align.CENTER
-        }
-        
-        val arrow = when {
-            progressDiff > 5f -> "⬇️" // Derrière
-            progressDiff < -5f -> "⬆️" // Devant
-            else -> "↔️" // À côté
-        }
-        
-        canvas.drawText(arrow, mirrorX, mirrorY - 35f, arrowPaint)
-    }
-    
     private fun drawWeatherEffects(canvas: Canvas, width: Float, height: Float, visibility: Float) {
         if (visibility < 1.0f) {
-            // Brouillard/pluie
             val fogPaint = Paint().apply {
                 color = Color.parseColor("#CCCCCC")
                 alpha = ((1f - visibility) * 150).toInt()
             }
             canvas.drawRect(0f, 0f, width, height, fogPaint)
             
-            // Gouttes de pluie si tempête
             if (weatherCondition == WeatherType.STORM) {
                 val rainPaint = Paint().apply {
                     color = Color.parseColor("#4682B4")
                     strokeWidth = 2f
                 }
                 
-                for (i in 0 until 50) {
+                for (i in 0 until 30) {
                     val x = Random.nextFloat() * width
                     val y = Random.nextFloat() * height
-                    canvas.drawLine(x, y, x, y + 20f, rainPaint)
+                    canvas.drawLine(x, y, x, y + 15f, rainPaint)
                 }
             }
         }
     }
     
     private fun drawUI(canvas: Canvas, width: Float, height: Float) {
-        // Indicateur météo
-        val weatherText = when (weatherCondition) {
-            WeatherType.CALM -> "🌊 Calme"
-            WeatherType.ROUGH -> "🌊🌊 Agité"
-            WeatherType.STORM -> "🌊🌊🌊 Tempête"
-        }
+        // Type de trajet
+        val trackText = "🏁 ${raceTrack.displayName}"
+        canvas.drawText(trackText, width * 0.15f, 35f, textPaint)
         
-        canvas.drawText(weatherText, width * 0.15f, 50f, textPaint)
+        // Météo
+        val weatherText = "🌊 ${weatherCondition.displayName}"
+        canvas.drawText(weatherText, width * 0.15f, 65f, textPaint)
         
-        // Indicateur de souffle
+        // Souffle
         val windText = "💨 ${(mySpeed * 100).toInt()}%"
-        canvas.drawText(windText, width * 0.15f, 90f, textPaint)
+        canvas.drawText(windText, width * 0.15f, 95f, textPaint)
         
-        // Message de victoire
+        // Progression
+        val progressText = "${myProgress.toInt()}%"
+        canvas.drawText(progressText, width * 0.85f, 35f, textPaint)
+        
+        // Message de fin
         if (raceFinished) {
-            val winnerText = if (winner == playerNumber) "🏆 VICTOIRE!" else "😞 Défaite..."
-            textPaint.textSize = 48f
-            canvas.drawText(winnerText, width / 2f, height / 2f, textPaint)
-            textPaint.textSize = 32f
+            textPaint.textSize = 40f
+            canvas.drawText("🏁 FINI!", width / 2f, height / 2f, textPaint)
+            textPaint.textSize = 28f
             
-            canvas.drawText("Soufflez fort pour une nouvelle course!", width / 2f, height / 2f + 60f, textPaint)
+            val timeText = String.format("⏱️ %.1fs", raceTime)
+            canvas.drawText(timeText, width / 2f, height / 2f + 50f, textPaint)
         }
     }
 }
