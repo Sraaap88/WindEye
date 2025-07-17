@@ -10,83 +10,76 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="🚤 WindEye - Course Immersive 🚤"
-        android:textSize="24sp"
+        android:text="🚤 WindEye - Records 🏆"
+        android:textSize="28sp"
         android:textStyle="bold"
         android:textColor="#ffffff"
         android:gravity="center"
-        android:layout_marginBottom="30dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Vue cockpit • Météo aléatoire • Contrôle 100% souffle"
-        android:textSize="14sp"
-        android:textColor="#cccccc"
-        android:gravity="center"
-        android:layout_marginBottom="30dp" />
-
-    <TextView
-        android:id="@+id/statusText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Prêt pour la course?"
-        android:textSize="18sp"
-        android:textColor="#cccccc"
         android:layout_marginBottom="20dp" />
 
     <TextView
-        android:id="@+id/gameCodeText"
+        android:id="@+id/welcomeText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text=""
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:textColor="#ff6b6b"
-        android:layout_marginBottom="40dp" />
-
-    <Button
-        android:id="@+id/createButton"
-        android:layout_width="280dp"
-        android:layout_height="70dp"
-        android:text="🚤 Créer une course"
-        android:textSize="18sp"
-        android:layout_marginBottom="30dp" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:text="Prêt pour la course?"
+        android:textSize="16sp"
+        android:textColor="#cccccc"
         android:gravity="center"
-        android:layout_marginBottom="40dp">
-
-        <EditText
-            android:id="@+id/joinCodeEdit"
-            android:layout_width="180dp"
-            android:layout_height="60dp"
-            android:hint="Code de course"
-            android:textAlignment="center"
-            android:textColor="#ffffff"
-            android:textColorHint="#888888"
-            android:textSize="16sp"
-            android:background="#333333"
-            android:inputType="number"
-            android:maxLength="6"
-            android:layout_marginEnd="10dp" />
-
-        <Button
-            android:id="@+id/joinButton"
-            android:layout_width="120dp"
-            android:layout_height="60dp"
-            android:text="⛵ Rejoindre"
-            android:textSize="16sp" />
-
-    </LinearLayout>
+        android:layout_marginBottom="40dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="• Connectez-vous au même WiFi\n• Soufflez fort pour gagner!\n• Météo et parcours aléatoires"
+        android:text="Entrez votre nom :"
+        android:textSize="18sp"
+        android:textColor="#ffffff"
+        android:layout_marginBottom="15dp" />
+
+    <EditText
+        android:id="@+id/playerNameEdit"
+        android:layout_width="300dp"
+        android:layout_height="60dp"
+        android:hint="Votre nom"
+        android:textAlignment="center"
+        android:textColor="#ffffff"
+        android:textColorHint="#888888"
+        android:textSize="18sp"
+        android:background="#333333"
+        android:inputType="textPersonName|textCapWords"
+        android:maxLength="15"
+        android:layout_marginBottom="30dp" />
+
+    <Button
+        android:id="@+id/startRaceButton"
+        android:layout_width="300dp"
+        android:layout_height="70dp"
+        android:text="🚤 COMMENCER LA COURSE!"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="20dp" />
+
+    <Button
+        android:id="@+id/viewRecordsButton"
+        android:layout_width="300dp"
+        android:layout_height="60dp"
+        android:text="🏆 Voir les records"
+        android:textSize="16sp"
+        android:layout_marginBottom="30dp" />
+
+    <TextView
+        android:id="@+id/currentPlayerText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="14sp"
+        android:textColor="#888888"
+        android:gravity="center"
+        android:layout_marginBottom="20dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="• Course solo contre la montre\n• Trajets et météo aléatoires\n• Soufflez fort pour gagner!"
         android:textSize="14sp"
         android:textColor="#888888"
         android:textAlignment="center"
