@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">WindEye</string>
+    <string name="create_race">Créer une course</string>
+    <string name="join_race">Rejoindre</string>
+    <string name="race_code_hint">Code de course</string>
+    <string name="waiting_player">En attente du second joueur...</string>
+    <string name="connection_failed">Connexion échouée</string>
+    <string name="enter_code">Entrez un code de partie</string>
+    <string name="mic_permission_required">Permission microphone requise</string>
+    <string name="same_wifi_required">Les 2 téléphones doivent être sur le même WiFi</string>
+    <string name="race_instructions">• Connectez-vous au même WiFi\n• Soufflez fort pour gagner!\n• Météo et parcours aléatoires</string>
+    <string name="victory">🏆 VICTOIRE!</string>
+    <string name="defeat">😞 Défaite...</string>
+    <string name="blow_for_new_race">Soufflez fort pour une nouvelle course!</string>
+    <string name="blow_to_advance">Soufflez pour avancer!</string>
+    <string name="weather_calm">🌊 Calme</string>
+    <string name="weather_rough">🌊🌊 Agité</string>
+    <string name="weather_storm">🌊🌊🌊 Tempête</string>
+</resources>
