@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Couleurs principales -->
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="dark_gray">#333333</color>
+    <color name="light_gray">#CCCCCC</color>
+    <color name="medium_gray">#888888</color>
+    
+    <!-- Couleurs océan -->
+    <color name="sky_light">#87CEEB</color>
+    <color name="sky_dark">#4682B4</color>
+    <color name="sea_blue">#006994</color>
+    <color name="wave_blue">#4682B4</color>
+    
+    <!-- Couleurs bateau -->
+    <color name="boat_brown">#8B4513</color>
+    <color name="rope_brown">#D2691E</color>
+    <color name="mirror_gray">#E6E6FA</color>
+    
+    <!-- Couleurs interface -->
+    <color name="red_accent">#FF6B6B</color>
+    <color name="finish_line_red">#FF0000</color>
+    <color name="foam_white">#FFFFFF</color>
+    <color name="fog_gray">#CCCCCC</color>
+    <color name="rain_blue">#4682B4</color>
+    
+    <!-- Couleurs joueurs -->
+    <color name="player1_red">#FF0000</color>
+    <color name="player2_blue">#0000FF</color>
+    
+    <!-- Transparences -->
+    <color name="semi_transparent_black">#AA000000</color>
+    <color name="transparent_red">#96FF0000</color>
+</resources>
