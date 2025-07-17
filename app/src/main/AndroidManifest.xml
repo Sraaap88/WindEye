@@ -4,8 +4,11 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- NOUVELLES PERMISSIONS RÉSEAU -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     
-    <!-- Indiquer que l'app nécessite un microphone -->
     <uses-feature 
         android:name="android.hardware.microphone" 
         android:required="true" />
@@ -16,6 +19,7 @@
         android:supportsRtl="true"
         android:requestLegacyExternalStorage="true"
         android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
+        
         <activity android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="portrait">
@@ -24,6 +28,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <activity
+            android:name=".GameActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+            
     </application>
 
 </manifest>
