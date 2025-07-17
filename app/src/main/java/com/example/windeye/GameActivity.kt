@@ -3,22 +3,24 @@ package com.example.windeye
 import android.app.Activity
 import android.os.Bundle
 import android.widget.TextView
+import android.widget.Button
 
 class GameActivity : Activity() {
     
     private lateinit var boatRaceView: BoatRaceView
     private lateinit var statusText: TextView
+    private lateinit var timerText: TextView
+    private lateinit var backButton: Button
     
-    private var isHost: Boolean = false
-    private var gameCode: String = ""
-    private var networkManager: NetworkManager? = null
+    private var playerName: String = ""
+    private var recordsManager: RecordsManager? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_game)
         
-        isHost = intent.getBooleanExtra("isHost", false)
-        gameCode = intent.getStringExtra("gameCode") ?: ""
+        playerName = intent.getStringExtra("playerName") ?: "Joueur"
+        recordsManager = RecordsManager(this)
         
         initViews()
         setupGame()
@@ -27,42 +29,52 @@ class GameActivity : Activity() {
     private fun initViews() {
         boatRaceView = findViewById(R.id.boatRaceView)
         statusText = findViewById(R.id.statusText)
+        timerText = findViewById(R.id.timerText)
+        backButton = findViewById(R.id.backButton)
         
-        statusText.text = "Partie: $gameCode - ${if (isHost) "Joueur 1" else "Joueur 2"}"
+        statusText.text = "🚤 $playerName prêt à partir!"
+        
+        backButton.setOnClickListener {
+            finish()
+        }
     }
     
     private fun setupGame() {
-        val playerNumber = if (isHost) 1 else 2
-        boatRaceView.setPlayerNumber(playerNumber)
-        boatRaceView.setNetworkManager(networkManager)
+        boatRaceView.setPlayerName(playerName)
+        boatRaceView.setRecordsManager(recordsManager)
+        
+        // Callback quand la course est finie
+        boatRaceView.setOnRaceFinished { raceTime, trackType, weather ->
+            runOnUiThread {
+                showRaceResult(raceTime, trackType, weather)
+            }
+        }
+        
+        // Callback pour mettre à jour le timer
+        boatRaceView.setOnTimerUpdate { time ->
+            runOnUiThread {
+                timerText.text = "⏱️ ${String.format("%.1f", time)}s"
+            }
+        }
         
         // Démarrer la course
         boatRaceView.startRace()
+    }
+    
+    private fun showRaceResult(raceTime: Float, trackType: String, weather: String) {
+        val isNewRecord = recordsManager?.saveRaceResult(playerName, raceTime, trackType, weather) ?: false
         
-        // Configuration réseau
-        networkManager?.setOnDataReceived { data ->
-            runOnUiThread {
-                when (data["type"]) {
-                    "opponent_position" -> {
-                        val progress = data["progress"] as? Float ?: 0f
-                        val speed = data["speed"] as? Float ?: 0f
-                        boatRaceView.updateOpponentPosition(progress, speed)
-                    }
-                    "race_finished" -> {
-                        val winner = data["winner"] as? Int ?: 0
-                        boatRaceView.showWinner(winner)
-                    }
-                    "new_race" -> {
-                        boatRaceView.startNewRace()
-                    }
-                }
-            }
+        val resultText = if (isNewRecord) {
+            "🏆 NOUVEAU RECORD!\n${String.format("%.1f", raceTime)}s"
+        } else {
+            "🏁 Course terminée!\n${String.format("%.1f", raceTime)}s"
         }
+        
+        statusText.text = resultText
     }
     
     override fun onDestroy() {
         super.onDestroy()
         boatRaceView.stopRace()
-        networkManager?.disconnect()
     }
 }
