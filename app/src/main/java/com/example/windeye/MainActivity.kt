@@ -12,38 +12,41 @@ import android.Manifest
 
 class MainActivity : Activity() {
     
-    private lateinit var statusText: TextView
-    private lateinit var gameCodeText: TextView
-    private lateinit var joinCodeEdit: EditText
-    private lateinit var createButton: Button
-    private lateinit var joinButton: Button
+    private lateinit var welcomeText: TextView
+    private lateinit var playerNameEdit: EditText
+    private lateinit var startRaceButton: Button
+    private lateinit var viewRecordsButton: Button
+    private lateinit var currentPlayerText: TextView
     
-    private var networkManager: NetworkManager? = null
+    private var recordsManager: RecordsManager? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         
+        recordsManager = RecordsManager(this)
+        
         initViews()
         setupListeners()
         checkPermissions()
+        updateUI()
     }
     
     private fun initViews() {
-        statusText = findViewById(R.id.statusText)
-        gameCodeText = findViewById(R.id.gameCodeText)
-        joinCodeEdit = findViewById(R.id.joinCodeEdit)
-        createButton = findViewById(R.id.createButton)
-        joinButton = findViewById(R.id.joinButton)
+        welcomeText = findViewById(R.id.welcomeText)
+        playerNameEdit = findViewById(R.id.playerNameEdit)
+        startRaceButton = findViewById(R.id.startRaceButton)
+        viewRecordsButton = findViewById(R.id.viewRecordsButton)
+        currentPlayerText = findViewById(R.id.currentPlayerText)
     }
     
     private fun setupListeners() {
-        createButton.setOnClickListener {
-            createGame()
+        startRaceButton.setOnClickListener {
+            startRace()
         }
         
-        joinButton.setOnClickListener {
-            joinGame()
+        viewRecordsButton.setOnClickListener {
+            viewRecords()
         }
     }
     
@@ -53,59 +56,47 @@ class MainActivity : Activity() {
         }
     }
     
-    private fun createGame() {
-        statusText.text = "Création de la partie..."
-        createButton.isEnabled = false
+    private fun updateUI() {
+        val totalPlayers = recordsManager?.getTotalPlayers() ?: 0
+        val totalRaces = recordsManager?.getTotalRaces() ?: 0
         
-        networkManager = NetworkManager()
-        networkManager?.startServer { gameCode ->
-            runOnUiThread {
-                if (gameCode != null) {
-                    gameCodeText.text = "Code de partie: $gameCode"
-                    statusText.text = "En attente du second joueur..."
-                    
-                    networkManager?.setOnClientConnected {
-                        runOnUiThread {
-                            startGame(true, gameCode)
-                        }
-                    }
-                } else {
-                    statusText.text = "Erreur lors de la création"
-                    createButton.isEnabled = true
-                }
-            }
+        welcomeText.text = "🏆 $totalPlayers joueurs • $totalRaces courses"
+        
+        // Proposer le dernier nom utilisé
+        val lastPlayerName = recordsManager?.getLastPlayerName()
+        if (!lastPlayerName.isNullOrEmpty()) {
+            playerNameEdit.setText(lastPlayerName)
         }
     }
     
-    private fun joinGame() {
-        val gameCode = joinCodeEdit.text.toString().trim()
-        if (gameCode.isEmpty()) {
-            Toast.makeText(this, "Entrez un code de partie", Toast.LENGTH_SHORT).show()
+    private fun startRace() {
+        val playerName = playerNameEdit.text.toString().trim()
+        if (playerName.isEmpty()) {
+            Toast.makeText(this, "Entrez votre nom", Toast.LENGTH_SHORT).show()
             return
         }
         
-        statusText.text = "Connexion en cours..."
-        joinButton.isEnabled = false
-        
-        networkManager = NetworkManager()
-        networkManager?.connectToServer(gameCode) { success ->
-            runOnUiThread {
-                if (success) {
-                    startGame(false, gameCode)
-                } else {
-                    statusText.text = "Connexion échouée"
-                    joinButton.isEnabled = true
-                    Toast.makeText(this, "Impossible de rejoindre la partie", Toast.LENGTH_SHORT).show()
-                }
-            }
+        if (playerName.length > 15) {
+            Toast.makeText(this, "Nom trop long (15 caractères max)", Toast.LENGTH_SHORT).show()
+            return
         }
+        
+        // Sauvegarder le nom pour la prochaine fois
+        recordsManager?.saveLastPlayerName(playerName)
+        
+        val intent = Intent(this, GameActivity::class.java)
+        intent.putExtra("playerName", playerName)
+        startActivity(intent)
     }
     
-    private fun startGame(isHost: Boolean, gameCode: String) {
-        val intent = Intent(this, GameActivity::class.java)
-        intent.putExtra("isHost", isHost)
-        intent.putExtra("gameCode", gameCode)
+    private fun viewRecords() {
+        val intent = Intent(this, RecordsActivity::class.java)
         startActivity(intent)
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        updateUI() // Mettre à jour après retour d'une course
     }
     
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
