@@ -41,26 +41,15 @@ class RecordsActivity : Activity() {
     private fun displayRecords() {
         recordsLayout.removeAllViews()
         
-        // Record général
-        addSectionTitle("🏆 RECORD GÉNÉRAL")
-        val generalRecord = recordsManager?.getGeneralRecord()
-        if (generalRecord != null) {
-            addRecordItem("${String.format("%.1f", generalRecord.first)}s", generalRecord.second, generalRecord.third)
-        } else {
-            addEmptyMessage("Aucun record encore")
-        }
-        
-        addSpacer()
-        
-        // Records par catégorie
-        addSectionTitle("📊 RECORDS PAR CATÉGORIE")
-        val categoryRecords = recordsManager?.getCategoryRecords() ?: emptyList()
-        if (categoryRecords.isNotEmpty()) {
-            categoryRecords.take(8).forEach { (category, time, player) ->
-                addRecordItem("${String.format("%.1f", time)}s", player, category)
+        // Records de victoire par type
+        addSectionTitle("🏆 RECORDS DE VICTOIRE")
+        val winRecords = recordsManager?.getWinRecords() ?: emptyList()
+        if (winRecords.isNotEmpty()) {
+            winRecords.forEach { (raceType, time, player) ->
+                addRecordItem("${String.format("%.1f", time)}s", player, raceType)
             }
         } else {
-            addEmptyMessage("Aucun record par catégorie")
+            addEmptyMessage("Aucune victoire encore")
         }
         
         addSpacer()
@@ -71,7 +60,14 @@ class RecordsActivity : Activity() {
         if (recentRaces.isNotEmpty()) {
             recentRaces.forEach { race ->
                 val timeText = String.format("%.1f", race.time) + "s"
-                val details = "${race.trackType} • ${race.weather}"
+                val positionText = when(race.position) {
+                    1 -> "🥇 1er"
+                    2 -> "🥈 2ème"
+                    3 -> "🥉 3ème"
+                    4 -> "4ème"
+                    else -> "${race.position}ème"
+                }
+                val details = "${race.raceType} - $positionText"
                 addRecordItem(timeText, race.playerName, details)
             }
         } else {
