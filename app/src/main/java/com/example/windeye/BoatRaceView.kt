@@ -220,17 +220,24 @@ class BoatRaceView @JvmOverloads constructor(
             }
         }
         
-        // Vitesse d'avancement pour les IA
-        val aiSpeedMultiplier = when (raceType) {
-            RaceType.SPRINT -> 2.0f
-            RaceType.CLASSIC -> 1.5f
-            RaceType.ENDURANCE -> 1.2f
+        // Avancer les IA avec vitesse selon type de course
+        when (raceType) {
+            RaceType.SPRINT -> {
+                ia1Progress += ia1Speed * 2.0f
+                ia2Progress += ia2Speed * 2.0f
+                ia3Progress += ia3Speed * 2.0f
+            }
+            RaceType.CLASSIC -> {
+                ia1Progress += ia1Speed * 1.5f
+                ia2Progress += ia2Speed * 1.5f
+                ia3Progress += ia3Speed * 1.5f
+            }
+            RaceType.ENDURANCE -> {
+                ia1Progress += ia1Speed * 1.2f
+                ia2Progress += ia2Speed * 1.2f
+                ia3Progress += ia3Speed * 1.2f
+            }
         }
-        
-        // Avancer les IA
-        ia1Progress += ia1Speed * aiSpeedMultiplier
-        ia2Progress += ia2Speed * aiSpeedMultiplier
-        ia3Progress += ia3Speed * aiSpeedMultiplier
     }
     
     private fun checkRaceEnd() {
