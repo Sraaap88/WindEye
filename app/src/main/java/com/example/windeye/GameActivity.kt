@@ -4,7 +4,7 @@ import android.app.Activity
 import android.os.Bundle
 import android.widget.TextView
 import android.widget.Button
-
+ 
 class GameActivity : Activity() {
     
     private lateinit var boatRaceView: BoatRaceView
