@@ -7,9 +7,9 @@ import org.json.JSONObject
 
 data class RaceResult(
     val playerName: String,
+    val position: Int,
     val time: Float,
-    val trackType: String,
-    val weather: String,
+    val raceType: String,
     val timestamp: Long
 )
 
@@ -17,8 +17,8 @@ class RecordsManager(private val context: Context) {
     
     private val prefs: SharedPreferences = context.getSharedPreferences("boat_race_records", Context.MODE_PRIVATE)
     
-    fun saveRaceResult(playerName: String, time: Float, trackType: String, weather: String): Boolean {
-        val raceResult = RaceResult(playerName, time, trackType, weather, System.currentTimeMillis())
+    fun saveRaceResult(playerName: String, position: Int, time: Float, raceType: String): Boolean {
+        val raceResult = RaceResult(playerName, position, time, raceType, System.currentTimeMillis())
         
         // Ajouter à l'historique
         addToHistory(raceResult)
@@ -33,9 +33,9 @@ class RecordsManager(private val context: Context) {
         
         val resultJson = JSONObject().apply {
             put("playerName", result.playerName)
+            put("position", result.position)
             put("time", result.time)
-            put("trackType", result.trackType)
-            put("weather", result.weather)
+            put("raceType", result.raceType)
             put("timestamp", result.timestamp)
         }
         
@@ -50,70 +50,60 @@ class RecordsManager(private val context: Context) {
     }
     
     private fun checkAndSaveRecord(result: RaceResult): Boolean {
-        val recordKey = "record_${result.trackType}_${result.weather}"
-        val currentRecord = prefs.getFloat(recordKey, Float.MAX_VALUE)
-        
         var isNewRecord = false
         
-        // Record général (tous types confondus)
-        val generalRecord = prefs.getFloat("record_general", Float.MAX_VALUE)
-        if (result.time < generalRecord) {
-            prefs.edit().putFloat("record_general", result.time).apply()
-            prefs.edit().putString("record_general_player", result.playerName).apply()
-            prefs.edit().putString("record_general_details", "${result.trackType} • ${result.weather}").apply()
-            isNewRecord = true
+        // Record de victoire (1ère place) par type de course
+        if (result.position == 1) {
+            val recordKey = "record_win_${result.raceType}"
+            val currentRecord = prefs.getFloat(recordKey, Float.MAX_VALUE)
+            
+            if (result.time < currentRecord) {
+                prefs.edit().putFloat(recordKey, result.time).apply()
+                prefs.edit().putString("${recordKey}_player", result.playerName).apply()
+                isNewRecord = true
+            }
         }
         
-        // Record par catégorie
-        if (result.time < currentRecord) {
-            prefs.edit().putFloat(recordKey, result.time).apply()
-            prefs.edit().putString("${recordKey}_player", result.playerName).apply()
-            isNewRecord = true
-        }
+        // Meilleure position par type de course
+        val positionKey = "best_position_${result.playerName}_${result.raceType}"
+        val currentBestPosition = prefs.getInt(positionKey, 4)
         
-        // Record personnel
-        val personalKey = "personal_${result.playerName}"
-        val personalRecord = prefs.getFloat(personalKey, Float.MAX_VALUE)
-        if (result.time < personalRecord) {
-            prefs.edit().putFloat(personalKey, result.time).apply()
-            prefs.edit().putString("${personalKey}_details", "${result.trackType} • ${result.weather}").apply()
+        if (result.position < currentBestPosition) {
+            prefs.edit().putInt(positionKey, result.position).apply()
+            prefs.edit().putFloat("${positionKey}_time", result.time).apply()
+            isNewRecord = true
         }
         
         return isNewRecord
     }
     
-    fun getGeneralRecord(): Triple<Float, String, String>? {
-        val time = prefs.getFloat("record_general", Float.MAX_VALUE)
-        if (time == Float.MAX_VALUE) return null
+    fun getBestPositionForRaceType(playerName: String, raceType: String): String {
+        val positionKey = "best_position_${playerName}_${raceType}"
+        val bestPosition = prefs.getInt(positionKey, -1)
         
-        val player = prefs.getString("record_general_player", "") ?: ""
-        val details = prefs.getString("record_general_details", "") ?: ""
-        
-        return Triple(time, player, details)
+        return if (bestPosition == -1) {
+            "Aucun"
+        } else {
+            when (bestPosition) {
+                1 -> "🥇 1er"
+                2 -> "🥈 2ème"
+                3 -> "🥉 3ème"
+                4 -> "4ème"
+                else -> "${bestPosition}ème"
+            }
+        }
     }
     
-    fun getPersonalRecord(playerName: String): Pair<Float, String>? {
-        val time = prefs.getFloat("personal_$playerName", Float.MAX_VALUE)
-        if (time == Float.MAX_VALUE) return null
-        
-        val details = prefs.getString("personal_${playerName}_details", "") ?: ""
-        return Pair(time, details)
-    }
-    
-    fun getCategoryRecords(): List<Triple<String, Float, String>> {
+    fun getWinRecords(): List<Triple<String, Float, String>> {
         val records = mutableListOf<Triple<String, Float, String>>()
+        val raceTypes = listOf("Sprint", "Classique", "Endurance")
         
-        val trackTypes = listOf("Ligne droite", "Parcours sinueux", "Circuit ovale", "Parcours en huit", "Parcours zigzag")
-        val weatherTypes = listOf("Calme", "Agité", "Tempête")
-        
-        for (track in trackTypes) {
-            for (weather in weatherTypes) {
-                val recordKey = "record_${track}_${weather}"
-                val time = prefs.getFloat(recordKey, Float.MAX_VALUE)
-                if (time != Float.MAX_VALUE) {
-                    val player = prefs.getString("${recordKey}_player", "") ?: ""
-                    records.add(Triple("$track • $weather", time, player))
-                }
+        for (raceType in raceTypes) {
+            val recordKey = "record_win_$raceType"
+            val time = prefs.getFloat(recordKey, Float.MAX_VALUE)
+            if (time != Float.MAX_VALUE) {
+                val player = prefs.getString("${recordKey}_player", "") ?: ""
+                records.add(Triple(raceType, time, player))
             }
         }
         
@@ -129,9 +119,9 @@ class RecordsManager(private val context: Context) {
             val obj = historyArray.getJSONObject(i)
             results.add(RaceResult(
                 obj.getString("playerName"),
+                obj.getInt("position"),
                 obj.getDouble("time").toFloat(),
-                obj.getString("trackType"),
-                obj.getString("weather"),
+                obj.getString("raceType"),
                 obj.getLong("timestamp")
             ))
         }
