@@ -16,7 +16,6 @@ class MainActivity : Activity() {
     private lateinit var playerNameEdit: EditText
     private lateinit var startRaceButton: Button
     private lateinit var viewRecordsButton: Button
-    private lateinit var currentPlayerText: TextView
     
     private var recordsManager: RecordsManager? = null
     
@@ -37,12 +36,11 @@ class MainActivity : Activity() {
         playerNameEdit = findViewById(R.id.playerNameEdit)
         startRaceButton = findViewById(R.id.startRaceButton)
         viewRecordsButton = findViewById(R.id.viewRecordsButton)
-        currentPlayerText = findViewById(R.id.currentPlayerText)
     }
     
     private fun setupListeners() {
         startRaceButton.setOnClickListener {
-            startRace()
+            selectRaceType()
         }
         
         viewRecordsButton.setOnClickListener {
@@ -69,7 +67,7 @@ class MainActivity : Activity() {
         }
     }
     
-    private fun startRace() {
+    private fun selectRaceType() {
         val playerName = playerNameEdit.text.toString().trim()
         if (playerName.isEmpty()) {
             Toast.makeText(this, "Entrez votre nom", Toast.LENGTH_SHORT).show()
@@ -84,7 +82,7 @@ class MainActivity : Activity() {
         // Sauvegarder le nom pour la prochaine fois
         recordsManager?.saveLastPlayerName(playerName)
         
-        val intent = Intent(this, GameActivity::class.java)
+        val intent = Intent(this, RaceSelectionActivity::class.java)
         intent.putExtra("playerName", playerName)
         startActivity(intent)
     }
@@ -96,7 +94,7 @@ class MainActivity : Activity() {
     
     override fun onResume() {
         super.onResume()
-        updateUI() // Mettre à jour après retour d'une course
+        updateUI()
     }
     
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
